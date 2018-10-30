@@ -1,0 +1,58 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1/taoshelf?useSSL=false&characterEncoding=UTF-8&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: 235610
+  jpa:
+    show-sql: false
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+  cache:
+    type: REDIS
+    cache-names: redisCache
+    redis:
+      time-to-live: 28800000ms
+      use-key-prefix: true
+      cache-null-values: true
+      key-prefix: USER@
+  redis:
+    #    host: 172.20.10.9
+    #    host: 192.168.1.139
+    host: 127.0.0.1
+    port: 6379
+    password:
+    lettuce:
+      pool:
+        max-idle: 10
+        min-idle: 5
+        max-active: 10
+        max-wait: 2000ms
+  freemarker:
+    request-context-attribute: request
+  resources:
+    static-locations: classpath:/
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 20MB
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: embedded
+      schema: classpath:schema/tables_mysql_innodb.sql
+    properties:
+      org.quartz.threadPool.threadCount: 500
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+logging:
+  level:
+    org.springframework.web: ERROR
+    org.hibernate: ERROR
+    com.youmeng.taoshelf: DEBUG
+  path: /root/logs/taoshelf
+
+server:
+  port: 80
+  servlet:
+    context-path: /taoshelf/
