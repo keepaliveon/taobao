@@ -9,7 +9,6 @@ import com.youmeng.taoshelf.entity.User;
 import com.youmeng.taoshelf.service.CardService;
 import com.youmeng.taoshelf.service.UserService;
 import org.springframework.stereotype.Controller;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,6 +17,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
+import java.util.regex.Pattern;
 
 @Controller
 public class UserController {
@@ -41,6 +41,14 @@ public class UserController {
                          @RequestParam(name = "session") String token,
                          @RequestParam String appkey) throws ApiException {
         //检验参数
+        Pattern pattern1 = Pattern.compile("^(?!_)(?!.*?_$)[a-zA-Z0-9_\\u4e00-\\u9fa5]+$");
+        if (!pattern1.matcher(nick).matches()) {
+            return "redirect:/error";
+        }
+        Pattern pattern2 = Pattern.compile(".*[`~!@#$%^&*()+=|{}':;',\\[\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？\\\\]+.*");
+        if (pattern2.matcher(token).matches()) {
+            return "redirect:/error";
+        }
         User user = userService.getUserByNick(nick);
         if (user == null) {
             user = new User(nick);
@@ -51,7 +59,7 @@ public class UserController {
         if (appkey.equals("12322527")) {
             response = client1.execute(request);
             if (response.getUserSubscribe() == null) {
-                return "redirect: https://tb.cn/VdsUTMw";
+                return "redirect:https://tb.cn/VdsUTMw";
             } else {
                 user.setEndDate1(response.getUserSubscribe().getEndDate());
                 user.setSessionKey1(token);
@@ -61,7 +69,7 @@ public class UserController {
         } else if (appkey.equals("12402170")) {
             response = client2.execute(request);
             if (response.getUserSubscribe() == null) {
-                return "redirect: https://tb.cn/QKThZNw";
+                return "redirect:https://tb.cn/QKThZNw";
             } else {
                 user.setEndDate2(response.getUserSubscribe().getEndDate());
                 user.setSessionKey2(token);

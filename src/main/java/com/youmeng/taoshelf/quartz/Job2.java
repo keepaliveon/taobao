@@ -185,6 +185,12 @@ public class Job2 extends QuartzJobBean {
                     redisTemplate.opsForValue().increment(taskId, 1);
                     System.out.println(user.getNick() + ":" + flag + " " + "[SUCCESS]" + good.getTitle());
                 }
+            } else {
+                if (flag == 1) {
+                    goodList1.add(good);
+                } else {
+                    rest(busyCount2);
+                }
             }
         }
     }
