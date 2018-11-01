@@ -115,6 +115,9 @@ public class Task implements Serializable {
     }
 
     public String getDescription() {
+        if (endTime == null) {
+            return type + "一次完整上下架";
+        }
         if (count == null) {
             long diff = endTime.getTime() - startTime.getTime();
             return type + diff / 60000 + "分钟";

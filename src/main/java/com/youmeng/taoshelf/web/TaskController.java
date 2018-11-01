@@ -60,16 +60,27 @@ public class TaskController {
         return modelAndView;
     }
 
-    @RequestMapping("/task_add")
-    public ModelAndView taskAdd(HttpSession session) {
-        ModelAndView modelAndView = new ModelAndView("/user/task_add");
+    @RequestMapping("/task1_add")
+    public ModelAndView task1Add(HttpSession session) {
+        ModelAndView modelAndView = new ModelAndView("/user/task1_add");
         User user = userService.getUserByNick((String) session.getAttribute("nick"));
         modelAndView.addObject("user", user);
         return modelAndView;
     }
 
-    @PostMapping("/add_task")
-    public String addTask(HttpSession session, RedirectAttributes attributes, @RequestParam String type, @RequestParam String start, @RequestParam String end) throws ParseException {
+    @RequestMapping("/task2_add")
+    public ModelAndView task2Add(HttpSession session) {
+        ModelAndView modelAndView = new ModelAndView("/user/task2_add");
+        User user = userService.getUserByNick((String) session.getAttribute("nick"));
+        modelAndView.addObject("user", user);
+        return modelAndView;
+    }
+
+    @PostMapping("/add_task1")
+    public String addTask1(HttpSession session, RedirectAttributes attributes,
+                           @RequestParam String type,
+                           @RequestParam String start,
+                           @RequestParam String end) throws ParseException {
         User user = userService.getUserByNick((String) session.getAttribute("nick"));
         Task task = new Task();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -98,6 +109,26 @@ public class TaskController {
         task.setType(type);
         task.setStartTime(startTime);
         task.setEndTime(endTime);
+        task.setUser(user);
+        if (taskService.addTask(task)) {
+            attributes.addFlashAttribute("info", new PageInfo("success", "创建任务成功"));
+            return "redirect:/task";
+        } else {
+            attributes.addFlashAttribute("info", new PageInfo("error", "创建任务失败"));
+            return "redirect:/task";
+        }
+    }
+
+    @PostMapping("/add_task2")
+    public String addTask2(HttpSession session, RedirectAttributes attributes,
+                           @RequestParam String type,
+                           @RequestParam String start) throws ParseException {
+        User user = userService.getUserByNick((String) session.getAttribute("nick"));
+        Task task = new Task();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date startTime = dateFormat.parse(start);
+        task.setType(type);
+        task.setStartTime(startTime);
         task.setUser(user);
         if (taskService.addTask(task)) {
             attributes.addFlashAttribute("info", new PageInfo("success", "创建任务成功"));

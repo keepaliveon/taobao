@@ -5,6 +5,7 @@ import org.junit.Test;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.Date;
 
 public class PublicTest {
@@ -42,9 +43,14 @@ public class PublicTest {
     }
 
     @Test
-    public void y() {
+    public void test3() {
         for (i = 0; i < 10; i++) {
             System.out.println(UUIDUtils.getSerialNum());
         }
+    }
+
+    @Test
+    public void tes4() {
+        ArrayDeque deque = new ArrayDeque();
     }
 }

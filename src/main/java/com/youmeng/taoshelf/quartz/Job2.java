@@ -187,7 +187,7 @@ public class Job2 extends QuartzJobBean {
                 }
             } else {
                 if (flag == 1) {
-                    goodList1.add(good);
+                    rest(busyCount1);
                 } else {
                     rest(busyCount2);
                 }

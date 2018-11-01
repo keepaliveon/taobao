@@ -2,6 +2,7 @@ package com.youmeng.taoshelf.service;
 
 import com.youmeng.taoshelf.entity.Task;
 import com.youmeng.taoshelf.entity.User;
+import com.youmeng.taoshelf.quartz.Job1;
 import com.youmeng.taoshelf.quartz.Job2;
 import com.youmeng.taoshelf.quartz.ShelfCircleJob1;
 import com.youmeng.taoshelf.repository.TaskRepository;
@@ -37,12 +38,21 @@ public class TaskService {
         try {
             String name = task.getId();
             String group = user.getNick();
+            JobDetail jobDetail;
+            if (task.getEndTime() != null) {
+                jobDetail = JobBuilder
+                        .newJob(Job2.class)
+                        .withIdentity(name, group)
+                        .usingJobData("task_id", task.getId())
+                        .build();
+            } else {
+                jobDetail = JobBuilder
+                        .newJob(Job1.class)
+                        .withIdentity(name, group)
+                        .usingJobData("task_id", task.getId())
+                        .build();
+            }
 
-            JobDetail jobDetail = JobBuilder
-                    .newJob(Job2.class)
-                    .withIdentity(name, group)
-                    .usingJobData("task_id", task.getId())
-                    .build();
 
             Trigger trigger = TriggerBuilder
                     .newTrigger()

@@ -40,19 +40,21 @@ public class Job1 extends QuartzJobBean {
 
     private long totalNum;
 
-    private List<Good> goodList1 = new ArrayList<>();
+    private ArrayDeque<Good> goodQueue1 = new ArrayDeque<>();
 
-    private List<Good> goodList2 = new ArrayList<>();
+    private ArrayDeque<Good> goodQueue2 = new ArrayDeque<>();
 
-    private Map<Long, String> originalStatus1 = new HashMap<>();
+    private List<Good> failList1 = new ArrayList<>();
 
-    private Map<Long, String> originalStatus2 = new HashMap<>();
+    private List<Good> failList2 = new ArrayList<>();
 
     private int busyCount1;
 
     private int busyCount2;
 
-    private boolean end;
+    private boolean finish1 = false;
+
+    private boolean finish2 = false;
 
     @Override
     protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
@@ -63,14 +65,14 @@ public class Job1 extends QuartzJobBean {
         redisTemplate.opsForValue().set(taskId, "0");
         task = taskService.getTaskById(taskId);
         user = task.getUser();
-        initTask();
+        startTask();
     }
 
-    //初始化任务
-    private void initTask() {
-        end = false;
+    //开始任务
+    private void startTask() {
         logService.log(user, task.getDescription() + "任务进度", "任务开始");
         readTotalNum(task.getType());
+        logService.log(user, task.getDescription() + "任务进度", "任务总数" + totalNum + "件");
         task.setNum(totalNum);
         task.setStatus("正在读取商品列表");
         taskService.saveTask(task);
@@ -81,33 +83,45 @@ public class Job1 extends QuartzJobBean {
             @Override
             public void run() {
                 try {
-                    readGoodList(goodList2, s2, task.getType(), 2);
                     logService.log(user, task.getDescription() + "任务进度", "子任务2开始执行");
-                    while (!end) {
-                        executeGoodList(goodList2, 2);
-                    }
-                    recoveryGoodList(goodList2, 2);
-                    logService.log(user, task.getDescription() + "任务进度", "子任务2完成");
+                    readGoodList(goodQueue2, s2, task.getType(), 2);
+                    executeGoodList(goodQueue2, 2);
+                    recoveryGoodList(failList2, 2);
+                    logService.log(user, task.getDescription() + "任务进度", "子任务2执行完毕");
+                    finish2 = true;
                 } catch (Exception e) {
+                    e.printStackTrace();
                     logService.log(user, task.getDescription() + "任务进度", "子任务2异常中止");
+                    recoveryGoodList(failList2, 2);
+                    finish2 = true;
+                }
+                if (finish1) {
+                    task.setEndTime(new Date());
+                    task.setStatus("任务结束(成功处理" + redisTemplate.opsForValue().get(taskId) + "次)");
+                    taskService.saveTask(task);
+                    redisTemplate.delete(taskId);
                 }
             }
         }).start();
         try {
-            readGoodList(goodList1, s1, task.getType(), 1);
             logService.log(user, task.getDescription() + "任务进度", "子任务1开始执行");
-            while (!end) {
-                executeGoodList(goodList1, 1);
-            }
-            recoveryGoodList(goodList1, 1);
-            logService.log(user, task.getDescription() + "任务进度", "子任务1完成");
+            readGoodList(goodQueue1, s1, task.getType(), 1);
+            executeGoodList(goodQueue1, 1);
+            recoveryGoodList(failList1, 1);
+            logService.log(user, task.getDescription() + "任务进度", "子任务1执行完毕");
+            finish1 = true;
         } catch (Exception e) {
             e.printStackTrace();
             logService.log(user, task.getDescription() + "任务进度", "子任务1异常中止");
+            recoveryGoodList(failList1, 1);
+            finish1 = true;
         }
-        task.setStatus("任务结束(成功处理" + redisTemplate.opsForValue().get(taskId) + "次)");
-        taskService.saveTask(task);
-        redisTemplate.delete(taskId);
+        if (finish2) {
+            task.setEndTime(new Date());
+            task.setStatus("任务结束(成功处理" + redisTemplate.opsForValue().get(taskId) + "次)");
+            taskService.saveTask(task);
+            redisTemplate.delete(taskId);
+        }
     }
 
     //读总数(单线程)
@@ -127,7 +141,7 @@ public class Job1 extends QuartzJobBean {
     }
 
     //读列表(双线程)
-    private void readGoodList(List<Good> goodList, String page, String type, int flag) {
+    private void readGoodList(ArrayDeque<Good> goodQueue, String page, String type, int flag) {
         String[] split = page.split("-");
         long start = Long.parseLong(split[0]);
         long end = Long.parseLong(split[1]);
@@ -135,103 +149,68 @@ public class Job1 extends QuartzJobBean {
             case "库存商品上下架": {
                 for (long i = start; i <= end; i++) {
                     Result<Good> result = goodService.getGoodsInstock(user, null, 200L, i, flag);
-                    goodList.addAll(result.getItems());
+                    goodQueue.addAll(result.getItems());
                 }
                 break;
             }
             case "在售商品上下架": {
                 for (long i = start; i <= end; i++) {
                     Result<Good> result = goodService.getGoodsOnsale(user, null, 200L, i, flag);
-                    goodList.addAll(result.getItems());
+                    goodQueue.addAll(result.getItems());
                 }
                 break;
             }
         }
-        if (flag == 1) {
-            for (Good good : goodList) {
-                originalStatus1.put(good.getNumIid(), good.getApproveStatus());
-            }
-        } else if (flag == 2) {
-            for (Good good : goodList) {
-                originalStatus2.put(good.getNumIid(), good.getApproveStatus());
-            }
-        }
-        logService.log(user, task.getDescription() + "任务进度", "子任务" + flag + "分配" + goodList.size() + "件");
+        logService.log(user, task.getDescription() + "任务进度", "子任务" + flag + "分配" + goodQueue.size() + "件");
         task.setStatus("正在执行任务");
         taskService.saveTask(task);
         task = taskService.getTaskById(taskId);
     }
 
     //处理商品列表
-    private void executeGoodList(List<Good> goodList, int flag) {
-        for (Good good : goodList) {
+    private void executeGoodList(ArrayDeque<Good> goodQueue, int flag) {
+        Iterator<Good> iterator = goodQueue.iterator();
+        while (iterator.hasNext()) {
+            Good good = goodQueue.pop();
             task = taskService.findTaskById(taskId);
-            if (task.getEndTime().before(new Date())) {
-                end = true;
+            if (task.getEndTime() != null && task.getEndTime().before(new Date())) {
                 break;
             }
-            if (flag == 1) {
-                rest(busyCount1);
-            } else {
-                rest(busyCount2);
-            }
+            task = taskService.findTaskById(taskId);
             if (executeGood(good, flag)) {
-                if (flag == 1) {
-                    rest(busyCount1);
-                } else {
-                    rest(busyCount2);
-                }
                 if (executeGood(good, flag)) {
+                    //成功
                     redisTemplate.opsForValue().increment(taskId, 1);
                     System.out.println(user.getNick() + ":" + flag + " " + "[SUCCESS]" + good.getTitle());
+                } else {
+                    //失败则加入再处理队
+                    fail(flag, good);
                 }
             } else {
-                if (flag == 1) {
-                    goodList1.add(good);
-                } else {
-                    rest(busyCount2);
-                }
+                //失败则补到队尾
+                goodQueue.add(good);
             }
         }
     }
 
     //处理一件商品
     private boolean executeGood(Good good, int flag) {
+        rest(flag);
         if (good.getApproveStatus().equals("onsale")) {
             if (goodService.doGoodDelisting(user, good, flag)) {
-                if (flag == 1) {
-                    busyCount1 = 0;
-                    return true;
-                } else {
-                    busyCount2 = 0;
-                    return true;
-                }
+                notBusy(flag);
+                return true;
             } else {
-                if (flag == 1) {
-                    busyCount1++;
-                    return false;
-                } else {
-                    busyCount2++;
-                    return false;
-                }
+                busy(flag);
+                return false;
             }
         } else if (good.getApproveStatus().equals("instock")) {
             if (goodService.doGoodListing(user, good, flag)) {
-                if (flag == 1) {
-                    busyCount1 = 0;
-                    return true;
-                } else {
-                    busyCount2 = 0;
-                    return true;
-                }
+                notBusy(flag);
+                return true;
             } else {
-                if (flag == 1) {
-                    busyCount1++;
-                    return false;
-                } else {
-                    busyCount2++;
-                    return false;
-                }
+                busy(flag);
+                return false;
             }
         }
         return false;
@@ -239,82 +218,71 @@ public class Job1 extends QuartzJobBean {
 
     //恢复商品列表
     private void recoveryGoodList(List<Good> goodList, int flag) {
-        logService.log(user, task.getDescription() + "任务进度", "开始恢复子任务" + flag);
-        Map<Long, String> originalStatus;
-        if (flag == 1) {
-            originalStatus = this.originalStatus1;
-        } else {
-            originalStatus = this.originalStatus2;
-        }
+        logService.log(user, task.getDescription() + "任务进度", "开始恢复子任务" + flag + "(" + goodList.size() + "件)");
         for (Good good : goodList) {
-            String origin = originalStatus.get(good.getNumIid());
-            if (!origin.equals(good.getApproveStatus())) {
-                int count = 0;
-                while (count < 2 && !origin.equals(good.getApproveStatus())) {
-                    if (good.getApproveStatus().equals("onsale")) {
-                        if (goodService.doGoodDelisting(user, good, flag)) {
-                            if (flag == 1) {
-                                busyCount1 = 0;
-                            } else {
-                                busyCount2 = 0;
-                            }
-                        } else {
-                            if (flag == 1) {
-                                busyCount1++;
-                            } else {
-                                busyCount2++;
-                            }
-                        }
-                    } else if (good.getApproveStatus().equals("instock")) {
-                        if (goodService.doGoodListing(user, good, flag)) {
-                            if (flag == 1) {
-                                busyCount1 = 0;
-                            } else {
-                                busyCount2 = 0;
-                            }
-                        } else {
-                            if (flag == 1) {
-                                busyCount1++;
-                            } else {
-                                busyCount2++;
-                            }
-                        }
-                    }
-                    if (flag == 1) {
-                        rest(busyCount1);
-                    } else {
-                        rest(busyCount2);
-                    }
-                    count++;
-                }
-                if (origin.equals(good.getApproveStatus())) {
+            int count = 0;
+            while (count < 2) {
+                if (executeGood(good, flag)) {
                     logService.log(user, "恢复商品原状态成功", good.getTitle());
+                    break;
                 } else {
                     logService.log(user, "恢复商品原状态失败", good.getTitle());
+                    count++;
                 }
             }
         }
+        logService.log(user, task.getDescription() + "任务进度", "恢复子任务" + flag + "(" + goodList.size() + "件)完成");
     }
 
-    //休息
-    private void rest(int count) {
-        long sleepTime = 100L;
-        if (count == 0) {
-        } else if (count == 1) {
-            sleepTime = 1200L;
-        } else if (count == 2) {
-            sleepTime = 1600L;
-        } else if (count == 3) {
-            sleepTime = 2100L;
-        } else if (count == 4) {
-            sleepTime = 3000L;
+    private void notBusy(int flag) {
+        if (flag == 1) {
+            busyCount1 = 0;
         } else {
-            sleepTime = 3500L;
+            busyCount2 = 0;
+        }
+    }
+
+    private void busy(int flag) {
+        if (flag == 1) {
+            busyCount1++;
+        } else {
+            busyCount2++;
+        }
+    }
+
+    private void rest(int flag) {
+        int count;
+        int sleepTime;
+        if (flag == 1) {
+            count = busyCount1;
+        } else {
+            count = busyCount2;
+        }
+        if (count == 0) {
+            sleepTime = 200;
+        } else if (count == 1) {
+            sleepTime = 1200;
+        } else if (count == 2) {
+            sleepTime = 1600;
+        } else if (count == 3) {
+            sleepTime = 2100;
+        } else if (count == 4) {
+            sleepTime = 3000;
+        } else {
+            sleepTime = 3500;
         }
         try {
             Thread.sleep(sleepTime);
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void fail(int flag, Good good) {
+        if (flag == 1) {
+            failList1.add(good);
+        } else {
+            failList2.add(good);
         }
     }
 }

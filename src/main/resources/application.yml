@@ -47,6 +47,7 @@ spring:
       org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
 logging:
   level:
+    topsdk: OFF
     org.springframework.web: ERROR
     org.hibernate: ERROR
     com.youmeng.taoshelf: DEBUG

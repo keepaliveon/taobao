@@ -52,7 +52,7 @@
     <div class="row" style="margin-top: 15px">
         <h2 class="col-6">任务列表</h2>
         <div class="col-6">
-            <a href="/taoshelf/task_add" class="btn btn-primary float-right">创建任务</a>
+            <a href="/taoshelf/task1_add" class="btn btn-primary float-right">创建任务</a>
         </div>
     </div>
     <#if info?exists>
@@ -88,7 +88,7 @@
                 <td>${task.description!}</td>
                 <td>${task.num!}</td>
                 <td>${task.startTime?string('yyyy-MM-dd HH:mm:ss')}</td>
-                <td>${task.endTime?string('yyyy-MM-dd HH:mm:ss')}</td>
+                <td>${task.endTime!}</td>
                 <td>${task.status!}</td>
                 <td>
                     <button class="btn btn-danger btn-sm" onclick="stoptask('${task.id}')">中止</button>

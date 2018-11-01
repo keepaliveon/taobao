@@ -49,25 +49,45 @@
     </div>
 </nav>
 <div class="container" id="app">
-    <form method="post" action="/taoshelf/add_task">
+    <form method="post" action="/taoshelf/add_task1">
         <div class="row" style="margin-top: 15px">
-            <h2 class="col-6">配置定时任务</h2>
+            <h2 class="col-6">配置定时任务(两种方式请选择一种)</h2>
             <div class="col-6">
                 <button type="submit" class="btn btn-success float-right">配置好了，提交任务</button>
             </div>
         </div>
         <div class="row" style="margin-top: 15px">
-            <h5 class="col-12">1、选择任务类型：</h5>
+            <div class="col-12">
+                <ul class="nav nav-tabs">
+                    <li class="nav-item">
+                        <a href="/taoshelf/task1_add" class="nav-link active">循环上下架</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/taoshelf/task2_add" class="nav-link">完整上下架</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="row" style="margin-top: 15px">
+            <div class="col-12">
+                <div class="alert alert-success alert-dismissable">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <strong>成功!</strong> 指定操作成功提示信息。
+                </div>
+            </div>
+        </div>
+        <div class="row" style="margin-top: 15px">
+            <h5 class="col-12">1、选择要处理的商品：</h5>
             <label class="col-6">
                 <select class="form-control" name="type" required>
-                    <option value="在售商品上下架">在售商品上下架</option>
-                    <option value="库存商品上下架">库存商品上下架</option>
+                    <option value="在售商品上下架">在售商品</option>
+                    <option value="库存商品上下架">仓库商品</option>
                 </select>
             </label>
         </div>
         <div class="row" style="margin-top: 15px">
             <h5 class="col-12">2、设置任务执行时间段：<span
-                    style="font-size: small;color: red">*不能与已有任务的时间段重叠</span></h5>
+                    style="font-size: small;color: red">*不能与已有任务的时间冲突</span></h5>
             <label class="col-6">开始时间
                 <el-date-picker v-model="value1" type="datetime" placeholder="选择日期时间" :value-format='p'>
                 </el-date-picker>
@@ -76,7 +96,7 @@
             <label class="col-6">结束时间
                 <el-date-picker v-model="value2" type="datetime" placeholder="选择日期时间" :value-format='p'>
                 </el-date-picker>
-                <input type="text" name="end" class="form-control" required v-model:value="value2" hidden>
+                <input type="text" name="end" class="form-control" v-model:value="value2" hidden>
             </label>
         </div>
     </form>
