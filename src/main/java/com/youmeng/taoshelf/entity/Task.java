@@ -109,7 +109,7 @@ public class Task implements Serializable {
             return type + "1次完整上下架";
         } else {
             long diff = endTime.getTime() - startTime.getTime();
-            return type + diff / 60000 + "分钟循环上下架";
+            return type + diff / 60000 + "分钟上下架";
         }
     }
 

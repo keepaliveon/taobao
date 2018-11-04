@@ -8,7 +8,7 @@
     <version>1.0</version>
     <packaging>war</packaging>
 
-    <name>taobao</name>
+    <name>taoshelf</name>
     <description>上下架</description>
 
     <parent>

@@ -87,8 +87,8 @@
                 <td>${task_index+1}</td>
                 <td>${task.description!}</td>
                 <td>${task.num!}</td>
-                <td>${task.startTime?string('yyyy-MM-dd HH:mm:ss')}</td>
-                <td>${task.endTime?string('yyyy-MM-dd HH:mm:ss')}</td>
+                <td>${task.startTime!}</td>
+                <td>${task.endTime!}</td>
                 <td>${task.status!}</td>
                 <td>${task.user.nick}</td>
                 <td>
